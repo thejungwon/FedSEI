@@ -1,0 +1,9 @@
+web3==6.0.0
+py-solc-x==1.1.1
+crypten==0.4.1
+torch==1.13.1
+torchvision==0.14.1
+torchaudio==0.13.1
+requests==2.31.0
+scikit-learn
+numpy<2

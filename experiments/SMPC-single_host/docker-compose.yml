@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  smpc-single-host:
+    build:
+      context: ../..
+      dockerfile: experiments/SMPC-single_host/Dockerfile
+    environment:
+      - SCRIPT=${SCRIPT:-benchmark_crypten_parties_cpu.py}
+      - MODEL=${MODEL:-cnn}
+      - BATCH_SIZE=${BATCH_SIZE:-32}
+      - WORLD_SIZE=${WORLD_SIZE:-3}
+      - EXTRA_ARGS=${EXTRA_ARGS:-}
+      - WORLD_SIZE=1
+      - RANK=0
+      - MASTER_ADDR=127.0.0.1
+      - MASTER_PORT=29500
+      - RENDEZVOUS=env://
+      - DISTRIBUTED_BACKEND=gloo
+      - GLOO_SOCKET_IFNAME=lo
+      - OMP_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+      - PYTHONUNBUFFERED=1
+    command: >
+      bash -lc "ARGS=\"--model $${MODEL} --batch-size $${BATCH_SIZE}\";
+      if [ \"$${SCRIPT}\" = \"benchmark_crypten_parties_cpu.py\" ]; then
+        ARGS=\"$${ARGS} --world-size $${WORLD_SIZE}\";
+      fi;
+      python experiments/SMPC-single_host/$${SCRIPT} $${ARGS} $${EXTRA_ARGS}"

@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:latest
+    entrypoint: ["anvil"]
+    command: ["--host", "0.0.0.0", "--port", "8545"]
+    ports:
+      - "8545:8545"
+    networks:
+      - mpcnet
+
+  party0:
+    build: ./party
+    environment:
+      - RANK=0
+      - WORLD_SIZE=3
+      - DISTRIBUTED_BACKEND=gloo
+      - RENDEZVOUS=tcp://party0:29500
+      - MASTER_ADDR=party0
+      - MASTER_PORT=29500
+    ports:
+      - "8000:8000"
+    networks:
+      - mpcnet
+    depends_on:
+      - anvil
+
+  party1:
+    build: ./party
+    environment:
+      - RANK=1
+      - WORLD_SIZE=3
+      - DISTRIBUTED_BACKEND=gloo
+      - RENDEZVOUS=tcp://party0:29500
+      - MASTER_ADDR=party0
+      - MASTER_PORT=29500
+    ports:
+      - "8001:8000"
+    networks:
+      - mpcnet
+    depends_on:
+      - anvil
+
+  party2:
+    build: ./party
+    environment:
+      - RANK=2
+      - WORLD_SIZE=3
+      - DISTRIBUTED_BACKEND=gloo
+      - RENDEZVOUS=tcp://party0:29500
+      - MASTER_ADDR=party0
+      - MASTER_PORT=29500
+    ports:
+      - "8002:8000"
+    networks:
+      - mpcnet
+    depends_on:
+      - anvil
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    environment:
+      - ANVIL_URL=http://anvil:8545
+      - PARTY_URLS=http://party0:8000,http://party1:8000,http://party2:8000
+      - CIFAR10_ROOT=/app/PoC/client/data
+      - ESCROW_ARTIFACT=${ESCROW_ARTIFACT:-}
+    volumes:
+      - ./client/data:/app/PoC/client/data
+      - ./contract:/app/PoC/contract
+    networks:
+      - mpcnet
+    depends_on:
+      - anvil
+      - party0
+      - party1
+      - party2
+    profiles:
+      - client
+
+networks:
+  mpcnet:
+    driver: bridge

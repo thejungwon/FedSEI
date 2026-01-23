@@ -1,0 +1,11 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+crypten==0.4.1
+torch==1.12.1
+torchvision==0.13.1
+torchaudio==0.12.1
+eth-account==0.10.0
+web3==6.0.0
+requests==2.31.0
+scikit-learn
+numpy<2
