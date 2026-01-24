@@ -60,3 +60,17 @@ DATASET=cifar10 MODEL=lenet NUM_CLIENTS=5 EPOCHS=2 \
 BATCH_SIZE=64 LR=0.0005 ALPHA=0.3 \
 docker compose up --build
 ```
+
+## CrypTen SMPC Dummy (Dedicated Compose)
+
+```
+cd experiments/ensemble
+docker compose run --rm crypten-ensemble-dummy
+```
+
+Customize via environment variables:
+
+```
+WORLD_SIZE=3 NUM_SAMPLES=64 NUM_CLASSES=10 IMG_SIZE=8 IN_CH=1 TTA_STEPS=2 SPECTRAL_ITERS=5 \
+docker compose run --rm crypten-ensemble-dummy
+```

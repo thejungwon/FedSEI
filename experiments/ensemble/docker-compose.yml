@@ -32,3 +32,24 @@ services:
       --device $${DEVICE}
       --model-dir $${MODEL_DIR}
       $${EXTRA_ARGS}"
+
+  crypten-ensemble-dummy:
+    build:
+      context: ../..
+      dockerfile: experiments/ensemble/Dockerfile
+    environment:
+      - WORLD_SIZE=${WORLD_SIZE:-3}
+      - NUM_SAMPLES=${NUM_SAMPLES:-32}
+      - NUM_CLASSES=${NUM_CLASSES:-5}
+      - IMG_SIZE=${IMG_SIZE:-8}
+      - IN_CH=${IN_CH:-1}
+      - TTA_STEPS=${TTA_STEPS:-3}
+      - SPECTRAL_ITERS=${SPECTRAL_ITERS:-5}
+    command: >
+      bash -lc "python experiments/ensemble/crypten_smpc_ensemble_dummy.py
+      --num-samples $${NUM_SAMPLES}
+      --num-classes $${NUM_CLASSES}
+      --img-size $${IMG_SIZE}
+      --in-ch $${IN_CH}
+      --tta-steps $${TTA_STEPS}
+      --spectral-iters $${SPECTRAL_ITERS}"

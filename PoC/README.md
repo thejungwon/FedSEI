@@ -15,7 +15,7 @@ This proof-of-concept includes:
 2) Start the services:
 
 ```
-docker-compose up --build
+docker compose up --build
 ```
 
 This launches:
@@ -35,7 +35,7 @@ python client.py
 
 ```
 # Docker (recommended on Apple Silicon with precompiled artifact)
-docker-compose run --rm --use-aliases client
+docker compose run --rm --use-aliases client
 ```
 
 Precompile the contract and point the client to the artifact (recommended on Apple Silicon):
@@ -44,7 +44,7 @@ Precompile the contract and point the client to the artifact (recommended on App
 docker run --rm -v "$PWD/contract:/src" ethereum/solc:0.8.20 \
   --combined-json abi,bin /src/Escrow.sol > ./contract/Escrow.compiled.json
 
-docker-compose run --rm --use-aliases \
+docker compose run --rm --use-aliases \
   -e ESCROW_ARTIFACT=/app/PoC/contract/Escrow.compiled.json client
 ```
 
@@ -94,7 +94,7 @@ python -c "from solcx import install_solc; install_solc('0.8.20')"
 1) **Setup**
    - Start Anvil + 3 MPC parties:
      ```
-     docker-compose up --build
+     docker compose up --build
      ```
    - Run the client flow:
      ```

@@ -18,13 +18,13 @@ This repository contains:
 ```
 # start Anvil + 3 parties
 cd PoC
-docker-compose up --build
+docker compose up --build
 ```
 
 ```
 # in another terminal (choose one)
 cd PoC
-docker-compose run --rm --use-aliases client
+docker compose run --rm --use-aliases client
 
 # or local Python
 cd PoC/client
@@ -37,7 +37,7 @@ python client.py
 cd PoC
 docker run --rm -v "$PWD/contract:/src" ethereum/solc:0.8.20 \
   --combined-json abi,bin /src/Escrow.sol > ./contract/Escrow.compiled.json
-docker-compose run --rm --use-aliases \
+docker compose run --rm --use-aliases \
   -e ESCROW_ARTIFACT=/app/PoC/contract/Escrow.compiled.json client
 ```
 
