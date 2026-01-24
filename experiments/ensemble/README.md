@@ -2,7 +2,7 @@
 
 ## Overview
 
-Scripts for federated-style client training and ensemble inference on vision datasets.
+Scripts for local client training and ensemble inference on vision datasets.
 
 ## Run (Local Python)
 
