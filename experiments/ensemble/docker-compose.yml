@@ -39,11 +39,11 @@ services:
       dockerfile: experiments/ensemble/Dockerfile
     environment:
       - WORLD_SIZE=${WORLD_SIZE:-3}
-      - NUM_SAMPLES=${NUM_SAMPLES:-32}
+      - NUM_SAMPLES=${NUM_SAMPLES:-1}
       - NUM_CLASSES=${NUM_CLASSES:-5}
-      - IMG_SIZE=${IMG_SIZE:-8}
+      - IMG_SIZE=${IMG_SIZE:-1}
       - IN_CH=${IN_CH:-1}
-      - TTA_STEPS=${TTA_STEPS:-3}
+      - TTA_STEPS=${TTA_STEPS:-2}
       - SPECTRAL_ITERS=${SPECTRAL_ITERS:-5}
     command: >
       bash -lc "python experiments/ensemble/crypten_smpc_ensemble_dummy.py

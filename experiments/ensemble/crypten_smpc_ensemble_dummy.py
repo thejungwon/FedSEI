@@ -35,6 +35,11 @@ PRECISION_BITS = int(
     os.environ.get("PRECISION_BITS", "16")
 )  # Keep modest to avoid overflow.
 SOFTMAX_TEMP = 1.0
+TTA_STEPS = int(os.environ.get("TTA_STEPS", "0"))
+TTA_NOISE_STD = float(os.environ.get("TTA_NOISE_STD", "0.05"))
+TTA_FLIP_PROB = float(os.environ.get("TTA_FLIP_PROB", "0.5"))
+TTA_GAMMA = float(os.environ.get("TTA_GAMMA", "1.0"))
+TTA_EPS = 1e-4
 
 
 # Conv2d under SMPC is slow, so use a tiny model.
@@ -64,6 +69,15 @@ def make_dummy_data(seed, num_samples, in_ch, img_size, num_classes):
     x = torch.randn(num_samples, in_ch, img_size, img_size)
     y = torch.randint(0, num_classes, (num_samples,))
     return x, y
+
+
+def tta_augment_plain(x: torch.Tensor) -> torch.Tensor:
+    x_aug = x.clone()
+    if TTA_NOISE_STD > 0:
+        x_aug = x_aug + TTA_NOISE_STD * torch.randn_like(x_aug)
+    if TTA_FLIP_PROB > 0 and random.random() < TTA_FLIP_PROB:
+        x_aug = torch.flip(x_aug, dims=[3])
+    return x_aug
 
 
 # --- Secure Voting Logic (inputs/outputs are encrypted) ---
@@ -126,7 +140,7 @@ def mpc_main():
 
     # Keep the demo tiny (full SMPC is slow).
     # [Config] Image size: 8x8, samples: 4.
-    N_SAMPLES = 100
+    N_SAMPLES = 10
     IMG_SIZE = 8
     IN_CH = 1
     N_CLASSES = 3
@@ -233,25 +247,85 @@ def mpc_main():
     t0 = time.time()
     enc_hard_pred = secure_hard_voting(enc_logits_k_nc)
     if rank == 0:
-        print(f"  - Hard Voting Done ({time.time()-t0:.2f}s)")
+        print(f"  - Hard Voting Done ({time.time()-t0:.3f}s)")
 
     # (B) Soft Voting
     t0 = time.time()
     enc_soft_prob, enc_soft_pred = secure_soft_voting(enc_probs_k_nc)
     if rank == 0:
-        print(f"  - Soft Voting Done ({time.time()-t0:.2f}s)")
+        print(f"  - Soft Voting Done ({time.time()-t0:.3f}s)")
 
     # (C) Entropy Weighted
     t0 = time.time()
     enc_ent_prob, enc_ent_pred = secure_entropy_voting(enc_probs_k_nc)
     if rank == 0:
-        print(f"  - Entropy Voting Done ({time.time()-t0:.2f}s)")
+        print(f"  - Entropy Voting Done ({time.time()-t0:.3f}s)")
 
     # (D) Spectral
     t0 = time.time()
     enc_spec_prob, enc_spec_pred = secure_spectral_voting(enc_probs_k_nc)
     if rank == 0:
-        print(f"  - Spectral Voting Done ({time.time()-t0:.2f}s)")
+        print(f"  - Spectral Voting Done ({time.time()-t0:.3f}s)")
+
+    # ---------------------------------------------------------
+    # 4.1 TTA-based L2 Weighted Ensemble (Optional)
+    # ---------------------------------------------------------
+    enc_tta_soft_pred = None
+    enc_tta_l2_pred = None
+
+    if TTA_STEPS > 0:
+        if rank == 0:
+            print(f"[Step 4.1] Starting TTA L2-weighted ensemble (T={TTA_STEPS})...\n")
+        tta_t0 = time.time()
+
+        K = enc_logits_k_nc.size(0)
+        N = enc_logits_k_nc.size(1)
+        C = enc_logits_k_nc.size(2)
+
+        sum_probs_k_nc = crypten.cryptensor(
+            torch.zeros(K, N, C), src=0, precision=PRECISION_BITS
+        )
+        sum_l2_k_n = crypten.cryptensor(
+            torch.zeros(K, N), src=0, precision=PRECISION_BITS
+        )
+
+        for _ in range(TTA_STEPS):
+            if rank == 0:
+                x_aug_plain = tta_augment_plain(x_plain)
+            else:
+                x_aug_plain = torch.zeros_like(x_plain)
+
+            enc_x_aug = crypten.cryptensor(x_aug_plain, src=0, precision=PRECISION_BITS)
+
+            enc_probs_t_list = []
+            enc_l2_t_list = []
+            for i, enc_m in enumerate(enc_models):
+                enc_logits_t = enc_m(enc_x_aug)
+                enc_probs_t = enc_logits_t.softmax(dim=-1)
+                enc_probs_t_list.append(enc_probs_t)
+
+                diff = enc_logits_t - enc_logits_list[i]
+                l2 = diff.pow(2).sum(dim=-1).sqrt()
+                enc_l2_t_list.append(l2)
+
+            enc_probs_t_k_nc = crypten.stack(enc_probs_t_list, dim=0)
+            enc_l2_t_k_n = crypten.stack(enc_l2_t_list, dim=0)
+
+            sum_probs_k_nc = sum_probs_k_nc + enc_probs_t_k_nc
+            sum_l2_k_n = sum_l2_k_n + enc_l2_t_k_n
+
+        enc_mean_probs_k_nc = sum_probs_k_nc / float(TTA_STEPS)
+        enc_l2_k_n = sum_l2_k_n / float(TTA_STEPS)
+
+        enc_tta_soft_prob = enc_mean_probs_k_nc.mean(dim=0)
+        enc_tta_soft_pred = enc_tta_soft_prob.argmax(dim=-1, one_hot=False)
+
+        enc_w_k_n = (enc_l2_k_n * TTA_GAMMA).exp()
+        enc_w_k_n = enc_w_k_n / (enc_w_k_n.sum(dim=0, keepdim=True) + TTA_EPS)
+        enc_weighted = (enc_w_k_n.unsqueeze(-1) * enc_mean_probs_k_nc).sum(dim=0)
+        enc_tta_l2_pred = enc_weighted.argmax(dim=-1, one_hot=False)
+        if rank == 0:
+            print(f"[Step 4.1] TTA completed ({time.time()-tta_t0:.3f}s)")
 
     # ---------------------------------------------------------
     # 5. Decrypt Final Result Only
@@ -261,12 +335,26 @@ def mpc_main():
     final_preds = enc_ent_pred.get_plain_text().long()
     labels = y_plain.long()
 
+    acc = (final_preds == labels).float().mean().item() * 100.0
+
+    tta_soft_preds = None
+    tta_l2_preds = None
+    if enc_tta_soft_pred is not None:
+        tta_soft_preds = enc_tta_soft_pred.get_plain_text().long()
+    if enc_tta_l2_pred is not None:
+        tta_l2_preds = enc_tta_l2_pred.get_plain_text().long()
+
     if rank == 0:
-        acc = (final_preds == labels).float().mean().item() * 100.0
         print(f"\n[Result] Final Entropy Ensemble Accuracy: {acc:.2f}%")
         print(
             "Note: All computations (Input->Conv->ReLU->Voting) were performed in SMPC."
         )
+        if tta_soft_preds is not None:
+            tta_soft_acc = (tta_soft_preds == labels).float().mean().item() * 100.0
+            print(f"[Result] TTA Soft Ensemble Accuracy: {tta_soft_acc:.2f}%")
+        if tta_l2_preds is not None:
+            tta_l2_acc = (tta_l2_preds == labels).float().mean().item() * 100.0
+            print(f"[Result] TTA L2-weighted Accuracy: {tta_l2_acc:.2f}%")
 
 
 if __name__ == "__main__":

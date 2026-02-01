@@ -1,4 +1,4 @@
-# FedINF-PoC
+# FedSEI-PoC
 
 ## Overview
 

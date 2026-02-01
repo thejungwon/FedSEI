@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-ENV_NAME="${ENV_NAME:-fedinf}"
+ENV_NAME="${ENV_NAME:-fedsei}"
 PYTHON_VERSION="${PYTHON_VERSION:-3.9}"
 MINICONDA_DIR="$HOME/miniconda"
 
@@ -95,10 +95,10 @@ pip install \
 echo
 echo "==== [9] ~/.bashrc 자동 conda init 추가 ===="
 
-if ! grep -q "## FedINF conda init" "$HOME/.bashrc"; then
+if ! grep -q "## FedSEI conda init" "$HOME/.bashrc"; then
   {
     echo ""
-    echo "## FedINF conda init"
+    echo "## FedSEI conda init"
     echo "eval \"\$(${MINICONDA_DIR}/bin/conda shell.bash hook)\""
     echo "conda activate ${ENV_NAME}"
   } >> "$HOME/.bashrc"
@@ -107,10 +107,10 @@ fi
 echo
 echo "==== [10] OMP/MKL 제한 ===="
 
-if ! grep -q "## FedINF OMP settings" "$HOME/.bashrc"; then
+if ! grep -q "## FedSEI OMP settings" "$HOME/.bashrc"; then
   {
     echo ""
-    echo "## FedINF OMP settings"
+    echo "## FedSEI OMP settings"
     echo "export OMP_NUM_THREADS=1"
     echo "export MKL_NUM_THREADS=1"
   } >> "$HOME/.bashrc"
@@ -125,5 +125,5 @@ print("CrypTen:", crypten.__version__)
 EOF
 
 echo
-echo "==== ✅ FedINF 환경 준비 완료 ===="
+echo "==== ✅ FedSEI 환경 준비 완료 ===="
 echo "재접속 후 자동 활성화됨"
