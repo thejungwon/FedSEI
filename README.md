@@ -1,4 +1,4 @@
-# FedSEI-PoC
+# Federated Inference: Toward Privacy-Preserving Collaborative and Incentivized Model Serving
 
 ## Overview
 
