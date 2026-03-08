@@ -81,3 +81,16 @@ docker compose up --build
 
 - `PoC/README.md`
 - `experiments/README.md`
+
+
+
+## Citing this work
+
+```
+@article{seo2026federated,
+  title={Federated Inference: Toward Privacy-Preserving Collaborative and Incentivized Model Serving},
+  author={Seo, Jungwon and Catak, Ferhat Ozgur and Rong, Chunming and Jang, Jaeyeon},
+  journal={arXiv preprint arXiv:2603.02214},
+  year={2026}
+}
+```
